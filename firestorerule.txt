@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.uid in [
+          'DsBQ1TdWjgXvpVHUQJpF1H6jZzJ3', 
+          'xxySAjSMqKeq7SC6r5vyzes7USY2',
+          'odO8ZtMgTKeao0SDuy9L3gUmkx02', // annisa@fupa.id
+          'ujHnWTnftGh6scTI8cQyN8fhmOB2'  // karomi@fupa.id
+        ]
+      );
+    }
+    
+    function isKaryawan() {
+      return request.auth != null && (
+        request.auth.uid in [
+          'y2MTtiGZcVcts2MkQncckAaUasm2',
+          '4qwoQhWyZmatqkRYaENtz5Uw8fy1',
+          'UkIHdrTF6vefeuzp94ttlmxZzqk2',
+          'kTpmDbdBETQT7HIqT6TvpLwrbQf2',
+          '15FESE0b7cQFKqdJSqNBTZlHqWR2',
+          '1tQidUDFTjRTJdJJYIudw9928pa2',
+          '7BCcTwQ5wDaxWA6xbzJX9VWj1o52',
+          'mpyFesOjUIcs8O8Sh3tVLS8x7dA3',
+          '2jV2is3MQRhv7nnd1gXeqiaj11t2',
+          'or2AQDVY1hdpwT0YOmL4qJrgCju1',
+          'HNJ52lywYVaUhRK3BNEARfQsQo22',
+          'HD4EsoL2ykgwQeBl6RP1WfrcCKw1', // cabang1@fupa.id
+          'FD69ceLyhqedlBfhbLb2I0TljY03', // cabang2@fupa.id
+          'h5aw8ppJSgP9PQM0Oc2HtugUAH02'  // cabang3@fupa.id
+        ]
+      );
+    }
+    
+    function isUser(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isTargetUser(notification) {
+      return request.auth != null && (
+        notification.targets.hasAny(['all', 'admin', request.auth.uid]) || 
+        request.auth.uid in notification.targets
+      );
+    }
+
+    function isCutiOwner(cutiDoc) {
+      return request.auth != null && request.auth.uid == cutiDoc.data.uid;
+    }
+    
+    function isNotifOwner(notifDoc) {
+      return request.auth != null && (
+        request.auth.uid == notifDoc.data.from ||
+        request.auth.uid in notifDoc.data.targets ||
+        notifDoc.data.targets.hasAny(['all', 'admin'])
+      );
+    }
+    
+    function isValidAttendanceType() {
+      return request.resource.data.jenis in ['berangkat', 'pulang'];
+    }
+    
+    function isValidLeaveType() {
+      return request.resource.data.type in ['cuti', 'izin', 'sakit'];
+    }
+    
+    function isValidNotificationType() {
+      return request.resource.data.type in [
+        'announce', 'cuti_request', 'cuti_response', 
+        'attendance_success', 'override'
+      ];
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow create: if isUser(userId) || isAdmin();
+      allow read: if isAdmin() || isUser(userId);
+      allow update: if isAdmin() || isUser(userId);
+      allow delete: if isAdmin();
+    }
+
+    // Presensi collection
+    match /presensi/{docId} {
+      allow create: if 
+        (isKaryawan() && request.auth.uid == request.resource.data.uid && isValidAttendanceType()) 
+        || isAdmin();
+      allow read: if isAdmin() || (isKaryawan() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Cuti collection
+    match /cuti/{docId} {
+      allow create: if isKaryawan() && request.auth.uid == request.resource.data.uid && isValidLeaveType();
+      allow read: if isAdmin() || (isKaryawan() && isCutiOwner(resource));
+      allow update: if isAdmin() || (isKaryawan() && isCutiOwner(resource) && request.resource.data.status == 'dibatalkan');
+      allow delete: if isAdmin();
+    }
+    
+    // Leave balance collection
+    match /leave_balance/{userId} {
+      allow read: if isAdmin() || isUser(userId);
+      allow write: if isAdmin();
+    }
+
+    // Notifications collection
+    match /notifs/{docId} {
+      allow create: if 
+        isAdmin() || 
+        (isKaryawan() && request.resource.data.type in ['cuti_request', 'leave_cancellation'] && isValidNotificationType());
+      allow read: if isAdmin() || (isKaryawan() && isTargetUser(resource.data));
+      allow update: if isAdmin() || (isKaryawan() && isNotifOwner(resource));
+      allow delete: if isAdmin() || (isKaryawan() && isNotifOwner(resource));
+    }
+
+    // Settings collection
+    match /_settings/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Meta collection
+    match /_meta/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+  }
+}
