@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Presensi FUPA — Karyawan</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#FFC107" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL,GRAD@1,200" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg1:#FFF59D; --bg2:#FFD54F; --bg3:#FFB300; --card:#ffffffcc; --txt:#222; --accent:#673AB7;
+      --soft-shadow: 0 10px 30px rgba(0,0,0,.15); --good:#2e7d32; --warn:#f9a825; --bad:#c62828;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui; color:var(--txt);
+      background: radial-gradient(1200px 800px at 80% -10%, var(--bg3), transparent),
+                  radial-gradient(1000px 600px at 0% 0%, var(--bg2), transparent),
+                  linear-gradient(180deg, var(--bg1), var(--bg2) 60%, var(--bg3));
+      min-height:100svh; overflow-x:hidden; position:relative;
+    }
+    header{
+      position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px; backdrop-filter: blur(8px);
+    }
+    .brand{display:flex; align-items:center; gap:10px}
+    .icons{display:flex; align-items:center; gap:10px}
+    .icon-btn{
+      background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:14px; padding:8px; display:inline-flex; cursor:pointer;
+      box-shadow:var(--soft-shadow);
+    }
+    .chip{
+      background:#fff; padding:8px 12px; border-radius:12px; border:1px solid rgba(0,0,0,.06);
+      box-shadow:var(--soft-shadow); display:inline-flex; align-items:center; gap:8px;
+    }
+    .container{padding:16px}
+    .grid{display:grid; grid-template-columns:1fr; gap:16px}
+    @media(min-width:900px){ .grid{grid-template-columns:1.1fr .9fr} }
+    .card{
+      background:var(--card); border-radius:16px; padding:16px; box-shadow:var(--soft-shadow);
+    }
+    .btn{
+      display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg, #FFB300, #FF8F00);
+      color:#fff; border:none; border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer;
+      box-shadow:0 10px 20px rgba(255,143,0,.25);
+    }
+    .btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .status{font-weight:800; padding:6px 10px; border-radius:12px; color:#fff; display:inline-flex; align-items:center; gap:6px}
+    .s-good{background:var(--good)}
+    .s-warn{background:var(--warn)}
+    .s-bad{background:var(--bad)}
+    video, canvas, img{width:100%; border-radius:12px; background:#000; max-height:300px; object-fit:cover;}
+    .fab{
+      position:fixed; right:16px; bottom:16px; z-index:6; width:56px; height:56px; border-radius:50%;
+      display:grid; place-items:center; background:linear-gradient(135deg,#FF8F00,#FF6F00); color:#fff; box-shadow:var(--soft-shadow);
+      cursor:pointer;
+    }
+    dialog{
+      border:none; border-radius:16px; width:min(520px,90vw); padding:0; box-shadow:var(--soft-shadow);
+      animation:pop .2s ease; overflow:hidden;
+    }
+    @keyframes pop{ from{transform:translateY(10px); opacity:.5} to{transform:translateY(0); opacity:1} }
+    .dlg-head{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#fff}
+    .dlg-body{padding:14px; background:#fff}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .input{display:flex; align-items:center; gap:8px; background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:12px; padding:8px 10px}
+    .input input, .input select, .input textarea{border:none; outline:none; background:transparent; font-size:14px; width:100%;}
+    .toast{ position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:#111; color:#fff; padding:10px 14px;
+      border-radius:12px; box-shadow:var(--soft-shadow); z-index:10; display:none; }
+    .toast.success { background: var(--good); }
+    .toast.error { background: var(--bad); }
+    .toast.warning { background: var(--warn); }
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      opacity: 0.7;
+    }
+    .leave-balance {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .balance-item {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: var(--soft-shadow);
+    }
+    .balance-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .balance-label {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .filter-item {
+      flex: 1;
+      min-width: 120px;
+    }
+    #loadingIndicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #FFB300;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loadingIndicator">
+    <div style="text-align: center;">
+      <div class="spinner"></div>
+      <p>Memuat...</p>
+    </div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <span class="material-symbols-rounded" style="color:#FF8F00">workspace_premium</span>
+      <div>
+        <div style="font-weight:800">Presensi Karyawan</div>
+        <div id="serverTime" style="font-size:12px; opacity:.8">Memuat waktu server…</div>
+      </div>
+    </div>
+    <div class="icons">
+      <button id="notifBtn" class="icon-btn" title="Notifikasi">
+        <span class="material-symbols-rounded">notifications</span>
+        <span id="notifBadge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--bad); color:white; border-radius:50%; width:18px; height:18px; font-size:12px; display:flex; align-items:center; justify-content:center;"></span>
+      </button>
+      <button id="profileBtn" class="icon-btn" title="Profil">
+        <span class="material-symbols-rounded">account_circle</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <section class="card">
+        <h3 style="margin:0 0 8px">Ambil presensi</h3>
+        <div class="row" style="justify-content:space-between">
+          <span id="statusChip" class="status s-warn"><span class="material-symbols-rounded">schedule</span><span id="statusText">Menunggu</span></span>
+          <span class="chip"><span class="material-symbols-rounded">pin_drop</span><span id="locText">Koordinat belum aktif</span></span>
+        </div>
+        
+        <div style="margin-top:10px">
+          <video id="cam" playsinline autoplay muted></video>
+          <canvas id="canvas" style="display:none"></canvas>
+          <img id="preview" style="display:none" alt="Preview selfie" />
+        </div>
+        
+        <div class="row" style="margin-top:10px">
+          <div class="input">
+            <span class="material-symbols-rounded">assignment</span>
+            <select id="jenis">
+              <option value="berangkat">Presensi berangkat</option>
+              <option value="pulang">Presensi pulang</option>
+            </select>
+          </div>
+          <button id="snapBtn" class="btn"><span class="material-symbols-rounded">photo_camera</span> Ambil selfie</button>
+          <button id="uploadBtn" class="btn"><span class="material-symbols-rounded">cloud_upload</span> Upload</button>
+        </div>
+        
+        <div class="input" style="margin-top:10px">
+          <span class="material-symbols-rounded">notes</span>
+          <input id="attendanceNote" type="text" placeholder="Keterangan (opsional)" />
+        </div>
+        
+        <div class="hint" style="opacity:.8;margin-top:8px">
+          Presensi hanya pada 04:30–05:30 (berangkat) dan 10:00–11:00 (pulang). Di luar ini akan ditolak atau ditandai terlambat.
+        </div>
+      </section>
+
+      <section class="card">
+        <h3 style="margin:0 0 8px">Riwayat presensi</h3>
+        
+        <div class="filter-bar">
+          <div class="input filter-item">
+            <span class="material-symbols-rounded">filter_list</span>
+            <select id="riwayatFilter">
+              <option value="today">Hari Ini</option>
+              <option value="week">Minggu Ini</option>
+              <option value="month">Bulan Ini</option>
+              <option value="year">Tahun Ini</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+          <div class="input filter-item">
+            <span class="material-symbols-rounded">list</span>
+            <select id="riwayatLimit">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+        </div>
+        
+        <div id="logList" style="display:grid; gap:8px; max-height:300px; overflow-y:auto;"></div>
+      </section>
+    </div>
+    
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin:0 0 8px">Saldo Cuti</h3>
+      <div class="leave-balance">
+        <div class="balance-item">
+          <div class="balance-value" id="cutiBalance">12</div>
+          <div class="balance-label">Cuti</div>
+        </div>
+        <div class="balance-item">
+          <div class="balance-value" id="izinBalance">6</div>
+          <div class="balance-label">Izin</div>
+        </div>
+        <div class="balance-item">
+          <div class="balance-value" id="sakitBalance">12</div>
+          <div class="balance-label">Sakit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB cuti -->
+  <button class="fab" id="cutiFab" title="Ajukan cuti">
+    <span class="material-symbols-rounded">event</span>
+  </button>
+
+  <!-- Dialog profil -->
+  <dialog id="profileDlg">
+    <div class="dlg-head">
+      <div class="row"><span class="material-symbols-rounded">account_circle</span><b>Profil</b></div>
+      <button class="icon-btn" onclick="document.getElementById('profileDlg').close()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="dlg-body">
+      <div class="row" style="align-items:flex-end">
+        <img id="pfp" src="https://api.dicebear.com/7.x/initials/svg?seed=Karyawan&backgroundColor=ffb300,ffd54f&radius=20" alt="Foto profil" style="width:80px;height:80px;border-radius:16px; background:#eee" />
+        <div class="input"><span class="material-symbols-rounded">photo</span><input type="file" id="pfpFile" accept="image/*" /></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="input" style="flex:1"><span class="material-symbols-rounded">badge</span><input id="nama" placeholder="Nama lengkap" /></div>
+        <div class="input" style="flex:1"><span class="material-symbols-rounded">home</span><input id="alamat" placeholder="Alamat" /></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="input" style="flex:1"><span class="material-symbols-rounded">phone</span><input id="phone" placeholder="Nomor telepon" /></div>
+        <div class="input" style="flex:1"><span class="material-symbols-rounded">business</span><input id="department" placeholder="Departemen" /></div>
+      </div>
+      <div class="row" style="justify-content:space-between; margin-top:12px">
+        <button id="saveProfileBtn" class="btn"><span class="material-symbols-rounded">save</span> Simpan</button>
+        <button id="logoutBtn" class="btn" style="background:#222"><span class="material-symbols-rounded">logout</span> Keluar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog notifikasi -->
+  <dialog id="notifDlg">
+    <div class="dlg-head">
+      <div class="row"><span class="material-symbols-rounded">notifications</span><b>Notifikasi</b></div>
+      <button class="icon-btn" onclick="document.getElementById('notifDlg').close()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="dlg-body" id="notifList" style="display:grid; gap:10px; max-height:60vh; overflow-y:auto;"></div>
+  </dialog>
+
+  <!-- Dialog cuti -->
+  <dialog id="cutiDlg">
+    <div class="dlg-head">
+      <div class="row"><span class="material-symbols-rounded">event</span><b>Ajukan cuti</b></div>
+      <button class="icon-btn" onclick="document.getElementById('cutiDlg').close()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="dlg-body">
+      <div class="row">
+        <div class="input"><span class="material-symbols-rounded">category</span>
+          <select id="cutiJenis">
+            <option value="cuti">Cuti</option>
+            <option value="izin">Izin</option>
+            <option value="sakit">Sakit</option>
+          </select>
+        </div>
+        <div class="input"><span class="material-symbols-rounded">today</span><input id="cutiTanggal" type="date" /></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="input" style="flex:1"><span class="material-symbols-rounded">notes</span><input id="cutiCatatan" placeholder="Keterangan (opsional)" /></div>
+        <button id="ajukanCutiBtn" class="btn"><span class="material-symbols-rounded">send</span> Ajukan</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
