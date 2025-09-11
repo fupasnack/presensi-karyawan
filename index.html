@@ -61,10 +61,11 @@
       display:inline-flex; align-items:center; gap:10px; border:none; cursor:pointer; border-radius:14px;
       padding:12px 16px; font-weight:700; color:#fff; background:linear-gradient(135deg, #FFB300, #FF8F00);
       box-shadow:0 10px 20px rgba(255,143,0,.25); transition:transform .15s ease, filter .2s ease;
+      position: relative;
     }
     .btn:hover{ transform:translateY(-1px); filter:brightness(1.05) }
     .btn:disabled {
-      opacity: 0.7;
+      opacity: 0.8;
       cursor: not-allowed;
     }
     .link{ color:#222; opacity:.8; text-decoration:underline; cursor:pointer }
@@ -73,37 +74,28 @@
       position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:#111; color:#fff; padding:10px 14px;
       border-radius:12px; box-shadow:var(--soft-shadow); z-index:10; display:none;
     }
-    .toast.success { background: var(--good); }
-    .toast.error { background: var(--bad); }
-    .toast.warning { background: var(--warn); }
     .brand{
       display:flex; align-items:center; gap:10px; margin-bottom:10px;
     }
     .material-symbols-rounded{ font-variation-settings:"FILL" 1, "GRAD" 200; }
-    #loadingIndicator {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.8);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-    }
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #FFB300;
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
       border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
     }
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      to { transform: rotate(360deg); }
+    }
+    .success-message {
+      color: var(--good);
+      font-weight: 600;
+      margin-top: 8px;
+      text-align: center;
+      display: none;
     }
   </style>
 </head>
@@ -114,13 +106,6 @@
   <span class="material-symbols-rounded leaf" style="left:30%; font-size:36px; --x:30vw; --dx:20px; animation-duration:13s; animation-delay:.5s;">eco</span>
   <span class="material-symbols-rounded leaf" style="left:55%; font-size:30px; --x:55vw; --dx:-15px; animation-duration:12s; animation-delay:1s;">spa</span>
   <span class="material-symbols-rounded leaf" style="left:75%; font-size:40px; --x:75vw; --dx:10px; animation-duration:15s; animation-delay:1.5s;">eco</span>
-
-  <div id="loadingIndicator">
-    <div style="text-align: center;">
-      <div class="spinner"></div>
-      <p>Memuat...</p>
-    </div>
-  </div>
 
   <div class="wrap">
     <div class="card">
@@ -144,10 +129,11 @@
       <div class="row">
         <span class="hint">Jika lupa sandi, hubungi admin.</span>
         <button id="loginBtn" class="btn">
-          <span class="material-symbols-rounded">login</span> 
           <span id="loginText">Masuk</span>
+          <span id="loginSpinner" class="spinner" style="display:none;"></span>
         </button>
       </div>
+      <div id="successMessage" class="success-message"></div>
     </div>
   </div>
 
@@ -156,8 +142,64 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script type="module" src="./app.js"></script>
   <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyA08VBr5PfN5HB7_eub0aZ9-_FSFFHM62M",
+      authDomain: "presence-system-adfd7.firebaseapp.com",
+      projectId: "presence-system-adfd7",
+      storageBucket: "presence-system-adfd7.firebasestorage.app",
+      messagingSenderId: "84815583677",
+      appId: "1:84815583677:web:12e743b9f5c2b0cb395ad4",
+      measurementId: "G-HHJREDRFZB"
+    };
+
+    // Inisialisasi Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // UID roles
+    const ADMIN_UIDS = new Set([
+      "DsBQ1TdWjgXvpVHUQJpF1H6jZzJ3", // karomi@fupa.id
+      "xxySAjSMqKeq7SC6r5vyzes7USY2"  // annisa@fupa.id
+    ]);
+
+    const KARYAWAN_UIDS = new Set([
+      "y2MTtiGZcVcts2MkQncckAaUasm2", // x@fupa.id
+      "4qwoQhWyZmatqkRYaENtz5Uw8fy1", // cabang1@fupa.id
+      "UkIHdrTF6vefeuzp94ttlmxZzqk2", // cabang2@fupa.id
+      "kTpmDbdBETQT7HIqT6TvpLwrbQf2", // cabang3@fupa.id
+      "15FESE0b7cQFKqdJSqNBTZlHqWR2", // cabang4@fupa.id
+      "1tQidUDFTjRTJdJJYIudw9928pa2", // cabang5@fupa.id
+      "7BCcTwQ5wDaxWA6xbzJX9VWj1o52", // cabang6@fupa.id
+      "mpyFesOjUIcs8O8Sh3tVLS8x7dA3", // cabang7@fupa.id
+      "2jV2is3MQRhv7nnd1gXeqiaj11t2", // cabang8@fupa.id
+      "or2AQDVY1hdpwT0YOmL4qJrgCju1", // cabang9@fupa.id
+      "HNJ52lywYVaUhRK3BNEARfQsQo22"  // cabang10@fupa.id
+    ]);
+
+    // Util UI
+    const $ = (sel) => document.querySelector(sel);
+    const toast = (msg) => {
+      const t = $("#toast");
+      if (!t) return alert(msg);
+      t.textContent = msg;
+      t.style.display = "block";
+      setTimeout(() => { t.style.display = "none"; }, 2200);
+    };
+
+    // Redirect berdasarkan role
+    function redirectByRole(uid) {
+      if (ADMIN_UIDS.has(uid)) {
+        return "admin.html";
+      } else if (KARYAWAN_UIDS.has(uid)) {
+        return "karyawan.html";
+      } else {
+        auth.signOut();
+        return null;
+      }
+    }
+
     // UI only: toggle password eye
     document.getElementById('togglePass').onclick = () => {
       const inp = document.getElementById('password');
@@ -166,6 +208,72 @@
       inp.type = is ? 'text' : 'password';
       eye.textContent = is ? 'visibility_off' : 'visibility';
     }
+
+    // Login handler
+    document.getElementById('loginBtn').onclick = async () => {
+      const email = $("#email").value.trim();
+      const pass = $("#password").value.trim();
+      const loginBtn = $("#loginBtn");
+      const loginText = $("#loginText");
+      const loginSpinner = $("#loginSpinner");
+      const successMessage = $("#successMessage");
+      
+      if (!email || !pass) { 
+        toast("Isi email dan kata sandi."); 
+        return; 
+      }
+      
+      try {
+        // Tampilkan loading
+        loginBtn.disabled = true;
+        loginText.textContent = "Memeriksa...";
+        loginSpinner.style.display = "inline-block";
+        successMessage.style.display = "none";
+        
+        // Coba login
+        const userCredential = await auth.signInWithEmailAndPassword(email, pass);
+        const user = userCredential.user;
+        
+        // Tampilkan pesan sukses
+        loginText.textContent = "Berhasil!";
+        successMessage.textContent = "Password benar, mengarahkan ke halaman yang sesuai...";
+        successMessage.style.display = "block";
+        
+        // Redirect berdasarkan role
+        const redirectPage = redirectByRole(user.uid);
+        if (redirectPage) {
+          setTimeout(() => {
+            window.location.href = redirectPage;
+          }, 1500);
+        } else {
+          toast("Akses ditolak: akun belum diberi peran yang benar.");
+          await auth.signOut();
+          loginBtn.disabled = false;
+          loginText.textContent = "Masuk";
+          loginSpinner.style.display = "none";
+          successMessage.style.display = "none";
+        }
+      } catch (e) {
+        console.error("Login error:", e);
+        loginBtn.disabled = false;
+        loginText.textContent = "Masuk";
+        loginSpinner.style.display = "none";
+        successMessage.style.display = "none";
+        
+        if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found') {
+          toast("Email atau kata sandi salah.");
+        } else {
+          toast("Gagal masuk. Periksa koneksi internet Anda.");
+        }
+      }
+    };
+
+    // Handle Enter key press
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('loginBtn').click();
+      }
+    });
   </script>
 </body>
 </html>
